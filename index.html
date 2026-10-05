@@ -38,6 +38,9 @@
          .tabs-wrap::before { left: 0; background: linear-gradient(90deg, var(--gray-bg) 55%, transparent); }
          .tabs-wrap::after { right: 0; background: linear-gradient(270deg, var(--gray-bg) 55%, transparent); }
       }
+      /* Al ir a una card desde las tabs, deja lugar para el header fijo de puppis.com.ar */
+      .card { scroll-margin-top: 140px; }
+      @media (min-width: 1024px) { .card { scroll-margin-top: 170px; } }
    </style>
 </head>
 <body>
@@ -824,43 +827,45 @@
            window.addEventListener('resize', updateTabArrows);
            updateTabArrows();
          });
-         function toggleFaq(btn) {
-           const body = btn.nextElementSibling;
-           const open = body.classList.toggle('open');
-           btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-         }
-         function toggleAcc(btn) {
-           const body = btn.nextElementSibling;
-           const isOpen = body.classList.contains('open');
-           // Cerrar todos en la misma card
-           btn.closest('.card').querySelectorAll('.acc-body.open').forEach(b => {
+         /* Un solo desplegable abierto a la vez en toda la landing:
+            así la altura máxima es fija y el iframe nunca corta contenido */
+         function closeAllPanels(except) {
+           document.querySelectorAll('.acc-body.open, .faq-body.open').forEach(b => {
+             if (b === except) return;
              b.classList.remove('open');
-             b.previousElementSibling.setAttribute('aria-expanded','false');
+             b.previousElementSibling.setAttribute('aria-expanded', 'false');
            });
-           if (!isOpen) {
-             body.classList.add('open');
-             btn.setAttribute('aria-expanded','true');
-           }
          }
+         function togglePanel(btn) {
+           const body = btn.nextElementSibling;
+           const willOpen = !body.classList.contains('open');
+           closeAllPanels(body);
+           body.classList.toggle('open', willOpen);
+           btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+         }
+         function toggleFaq(btn) { togglePanel(btn); }
+         function toggleAcc(btn) { togglePanel(btn); }
          
          /* ── Tabs → scroll to card ── */
+         /* Si puppis.com.ar tiene el listener de GTM, el scroll lo hace la página padre
+            (con el offset exacto del header). Si no, lo resuelve el navegador con scrollIntoView. */
+         var parentListener = false;
+         window.addEventListener('message', function (e) {
+           if (e.data && e.data.type === 'puppis-fe-ack') parentListener = true;
+         });
          function scrollToCard(id, tabEl) {
            document.querySelectorAll('.tab-pill').forEach(t => t.classList.remove('active'));
            tabEl.classList.add('active');
+           // centrar la tab en la fila sin animación (dos scrolls suaves simultáneos se cancelan entre sí)
            const row = tabEl.parentElement;
-           row.scrollTo({ left: tabEl.offsetLeft - (row.clientWidth - tabEl.offsetWidth) / 2, behavior: 'smooth' });
+           row.scrollLeft = tabEl.offsetLeft - (row.clientWidth - tabEl.offsetWidth) / 2;
            const card = document.getElementById(id);
            if (!card) return;
-         
-           // scrollIntoView funciona desde dentro de un iframe:
-           // le pide al navegador (y a la ventana padre) que traiga el elemento a la vista
-           card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-         
-           // Fallback: si el iframe tiene la auto-height script, también avisamos al padre
-           try {
-             const offsetTop = card.getBoundingClientRect().top + window.scrollY;
-             window.parent.postMessage({ scrollTo: offsetTop }, '*');
-           } catch(e) {}
+           if (parentListener && window.parent !== window) {
+             window.parent.postMessage({ scrollTo: card.getBoundingClientRect().top + window.scrollY }, '*');
+           } else {
+             card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+           }
          }
       </script>
 
@@ -878,6 +883,10 @@
             }
           }
           window.addEventListener('load', send);
+          // si GTM se carga después que la landing, pide la altura de nuevo
+          window.addEventListener('message', function (e) {
+            if (e.data && e.data.type === 'puppis-fe-ping') { last = 0; send(); }
+          });
           window.addEventListener('resize', send);
           if ('ResizeObserver' in window) new ResizeObserver(send).observe(document.body);
           document.addEventListener('transitionend', send);
