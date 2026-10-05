@@ -15,6 +15,12 @@
       @media (min-width: 1024px) { .tabs-title { max-width: 800px; margin: 0 auto; padding-left: 0; padding-right: 0; } }
       .acc-steps { padding-left: 18px; }
       .acc-steps li { margin-bottom: 6px; }
+      /* Mobile: las 8 tabs visibles en grilla 4x2 (antes 5 quedaban fuera de pantalla) */
+      @media (max-width: 767px) {
+         .tabs-scroll { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; overflow: visible; padding: 0 var(--px); }
+         .tab-pill { min-width: 0; padding: 8px 2px 10px; border-radius: var(--r-lg); font-size: 10.5px; line-height: 1.2; white-space: normal; }
+         .tab-pill.active { box-shadow: 0 0 0 2px var(--blue) inset; }
+      }
    </style>
 </head>
 <body>
@@ -749,8 +755,43 @@
          </div>
 
       </section>
+
+      <!-- FAQ -->
+      <section class="faq-section" id="faq">
+         <div class="faq-inner">
+            <h2 class="section-title">Preguntas frecuentes</h2>
+            <div class="faq-list">
+               <div class="faq-item">
+                  <button class="faq-trigger" onclick="toggleFaq(this)" aria-expanded="false">¿Cuál es la forma más rápida de recibir mi pedido?<svg class="faq-chevron" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
+                  <div class="faq-body"><div class="faq-body-inner">Envío Flash: de lunes a viernes, comprá antes de las 18 hs y lo recibís en 3 hs. Aplica para CABA y zonas seleccionadas de AMBA.</div></div>
+               </div>
+               <div class="faq-item">
+                  <button class="faq-trigger" onclick="toggleFaq(this)" aria-expanded="false">¿Cuándo es gratis el envío?<svg class="faq-chevron" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
+                  <div class="faq-body"><div class="faq-body-inner">En Envío Express y Next Day, en compras superiores a $32.000. En Envío Programado, el envío es gratis en todas las entregas.</div></div>
+               </div>
+               <div class="faq-item">
+                  <button class="faq-trigger" onclick="toggleFaq(this)" aria-expanded="false">¿Puedo retirar mi compra en una sucursal?<svg class="faq-chevron" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
+                  <div class="faq-body"><div class="faq-body-inner">Sí, sin cargo. En el checkout elegí “Retiro en Tienda” y la sucursal que más te convenga. Si preferís no bajarte del auto, en las sucursales habilitadas te lo llevamos al baúl.</div></div>
+               </div>
+               <div class="faq-item">
+                  <button class="faq-trigger" onclick="toggleFaq(this)" aria-expanded="false">¿Hacen envíos al interior?<svg class="faq-chevron" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
+                  <div class="faq-body"><div class="faq-body-inner">Sí, a todo el país. El costo y el plazo se calculan en el checkout con tu código postal; la entrega tarda hasta 9 días hábiles.</div></div>
+               </div>
+               <div class="faq-item">
+                  <button class="faq-trigger" onclick="toggleFaq(this)" aria-expanded="false">¿Qué es el Envío Programado?<svg class="faq-chevron" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
+                  <div class="faq-body"><div class="faq-body-inner">Elegís el producto y la frecuencia, y te llega automáticamente con envío gratis y 10% OFF en cada entrega.</div></div>
+               </div>
+            </div>
+         </div>
+      </section>
+
       <script>
          /* ── Accordions (delivery cards) ── */
+         function toggleFaq(btn) {
+           const body = btn.nextElementSibling;
+           const open = body.classList.toggle('open');
+           btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+         }
          function toggleAcc(btn) {
            const body = btn.nextElementSibling;
            const isOpen = body.classList.contains('open');
@@ -782,6 +823,27 @@
              window.parent.postMessage({ scrollTo: offsetTop }, '*');
            } catch(e) {}
          }
+      </script>
+
+      <script>
+        /* Auto-altura: le avisa a puppis.com.ar el alto real de la landing
+           (lo recibe el listener cargado por GTM en /formas-de-entrega) */
+        (function () {
+          if (window.parent === window) return;
+          var last = 0;
+          function send() {
+            var h = Math.ceil(document.body.getBoundingClientRect().height);
+            if (h && h !== last) {
+              last = h;
+              window.parent.postMessage({ type: 'puppis-fe-height', height: h }, '*');
+            }
+          }
+          window.addEventListener('load', send);
+          window.addEventListener('resize', send);
+          if ('ResizeObserver' in window) new ResizeObserver(send).observe(document.body);
+          document.addEventListener('transitionend', send);
+          send();
+        })();
       </script>
 </body>
 </html>
