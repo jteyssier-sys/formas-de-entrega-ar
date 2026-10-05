@@ -15,11 +15,28 @@
       @media (min-width: 1024px) { .tabs-title { max-width: 800px; margin: 0 auto; padding-left: 0; padding-right: 0; } }
       .acc-steps { padding-left: 18px; }
       .acc-steps li { margin-bottom: 6px; }
-      /* Mobile: las 8 tabs visibles en grilla 4x2 (antes 5 quedaban fuera de pantalla) */
+      /* Mobile: tabs en fila con flechas para recorrerlas */
+      .tabs-wrap { position: relative; }
+      .tabs-arrow { display: none; }
       @media (max-width: 767px) {
-         .tabs-scroll { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; overflow: visible; padding: 0 var(--px); }
-         .tab-pill { min-width: 0; padding: 8px 2px 10px; border-radius: var(--r-lg); font-size: 10.5px; line-height: 1.2; white-space: normal; }
-         .tab-pill.active { box-shadow: 0 0 0 2px var(--blue) inset; }
+         .tabs-scroll { scroll-snap-type: x proximity; scroll-padding: 0 44px; padding-left: 44px; padding-right: 44px; }
+         .tab-pill { scroll-snap-align: start; flex-shrink: 0; }
+         .tabs-arrow {
+            display: flex; align-items: center; justify-content: center;
+            position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+            width: 34px; height: 34px; border-radius: 50%; border: none;
+            background: var(--white); color: var(--blue);
+            box-shadow: 0 2px 8px rgba(0,0,0,.18); cursor: pointer; transition: opacity .2s;
+         }
+         .tabs-arrow svg { width: 18px; height: 18px; }
+         .tabs-arrow.prev { left: 6px; }
+         .tabs-arrow.next { right: 6px; }
+         .tabs-arrow[disabled] { opacity: 0; pointer-events: none; }
+         .tabs-wrap::before, .tabs-wrap::after {
+            content: ""; position: absolute; top: 0; bottom: 0; width: 44px; z-index: 1; pointer-events: none;
+         }
+         .tabs-wrap::before { left: 0; background: linear-gradient(90deg, var(--gray-bg) 55%, transparent); }
+         .tabs-wrap::after { right: 0; background: linear-gradient(270deg, var(--gray-bg) 55%, transparent); }
       }
    </style>
 </head>
@@ -27,6 +44,9 @@
       <!-- DELIVERY TABS -->
       <section class="tabs-section" id="metodos">
          <h2 class="tabs-title">Elegí cómo recibir tu compra</h2>
+         <div class="tabs-wrap">
+         <button class="tabs-arrow prev" type="button" aria-label="Ver formas de entrega anteriores" onclick="scrollTabs(-1)"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+         <button class="tabs-arrow next" type="button" aria-label="Ver más formas de entrega" onclick="scrollTabs(1)"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
          <div class="tabs-scroll" role="navigation" aria-label="Formas de entrega">
             <a class="tab-pill active" href="https://www.puppis.com.ar/formas-de-entrega#flash" target="_top" onclick="scrollToCard('flash',this);return false;">
                <div class="tab-icon">
@@ -138,6 +158,7 @@
                </div>
                Envío Programado
             </a>
+         </div>
          </div>
       </section>
       <!-- CARDS -->
@@ -787,6 +808,22 @@
 
       <script>
          /* ── Accordions (delivery cards) ── */
+         function scrollTabs(dir) {
+           const el = document.querySelector('.tabs-scroll');
+           el.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: 'smooth' });
+         }
+         function updateTabArrows() {
+           const el = document.querySelector('.tabs-scroll');
+           if (!el) return;
+           document.querySelector('.tabs-arrow.prev').disabled = el.scrollLeft <= 4;
+           document.querySelector('.tabs-arrow.next').disabled = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+         }
+         document.addEventListener('DOMContentLoaded', function () {
+           const el = document.querySelector('.tabs-scroll');
+           el.addEventListener('scroll', updateTabArrows, { passive: true });
+           window.addEventListener('resize', updateTabArrows);
+           updateTabArrows();
+         });
          function toggleFaq(btn) {
            const body = btn.nextElementSibling;
            const open = body.classList.toggle('open');
@@ -810,6 +847,8 @@
          function scrollToCard(id, tabEl) {
            document.querySelectorAll('.tab-pill').forEach(t => t.classList.remove('active'));
            tabEl.classList.add('active');
+           const row = tabEl.parentElement;
+           row.scrollTo({ left: tabEl.offsetLeft - (row.clientWidth - tabEl.offsetWidth) / 2, behavior: 'smooth' });
            const card = document.getElementById(id);
            if (!card) return;
          
